@@ -1,0 +1,26 @@
+name: Publish
+# Publishing a version: push a "publish" branch with incoming/Machine-Room-<version>-Windows-VST3.zip and
+# incoming/notes.md. This makes the public release v<version> with the zip, then deletes the publish branch, so main
+# never keeps the zip files.
+on:
+  push:
+    branches: [publish]
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          Z=$(ls incoming/Machine-Room-*-Windows-VST3.zip | head -1)
+          V=$(basename "$Z" | sed -E 's/^Machine-Room-(.*)-Windows-VST3\.zip$/\1/')
+          gh release create "v$V" "$Z" --target main --title "Machine Room $V" --notes-file incoming/notes.md --latest --repo "$GITHUB_REPOSITORY"
+      - name: Remove the publish branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/publish"
